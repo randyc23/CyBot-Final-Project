@@ -1,0 +1,38 @@
+// while initiate test is yes
+    // Check for Emergency Stop (Highest Priority)
+    if (bumpTriggered || cliffDetected || wheelDropped) {
+        // stop motors
+        // notify gui emergency stop triggered 
+        // back towards direction it came
+		// rescan area
+		// send raw data
+		// ask gui how to proceed
+    } 
+	
+	// Check for Manual Override
+    else if (manualCommandReceived) {
+        // execute manual command drive, turn, or sweep
+	}
+	
+	// Perform Autonomous Navigation (Lowest Priority)
+    else if (autoModeIsEnabled) {
+        if (isBase is no) {
+            // if pathClear is yes 
+                // begin driving forward X distance 
+				// check sensors
+                
+            } else {
+                // HEURISTIC: Use 180-degree sweep data
+                // Identify gaps wide enough for robot
+                // Score gaps based on width and target heading
+                // Turn toward the best gap and drive
+            }
+        } else {
+            // Part III: Positioning at Destination
+            // if foundEntrance is yes {
+                // align to pillar midpoint
+                // move to retrieval zone
+                // signal gui mission complete 
+            }
+        }
+    }
