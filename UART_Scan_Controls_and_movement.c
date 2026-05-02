@@ -28,9 +28,11 @@
 */
 
 
+
 //Global Variable/Arrays
 
-
+const float CYBOT_WIDTH = 30.0 // 30.0 cm.
+const float MAX_IR_SCAN_DIST = 70.0;
 double distances[180];
 int objectNum = 0;
 
@@ -52,7 +54,7 @@ int counter = 0;
 
 int scan_counter = 0;
 int objectCoordIndex = 0;
-
+int tooManyObjects = 0; // boolean that is used in a for loop to see if the CyBot is stuck.
 //IR sensor global variables
 
 int ir_val[180];
@@ -88,6 +90,17 @@ float[] xCliffCoords = new float[20];
 float[] yCliffCoords = new float[20];
 float currentX = 0.0;
 float currentY = 0.0;
+float validXOpening = 0.0;
+float validYOpening = 0.0;
+double bestDistance = 0.0;
+float bestY = 0.0;
+float bestX = 0.0;
+int bestI = 0;
+int bestJ = 0;
+
+
+int no = 0;
+int manualMode = 0;
 
 // Get Methods That return values.
 public float getCurrentX() {
@@ -180,7 +193,6 @@ int move_forward(oi_t *sensor_data, double distance_mm) {
                 continue;
             }
         }
-
         for (x = 0; x < xObjectCoords.length; ++x) {
                 if (abs(currentX - xObjectCoords[x]) <= 15.0) { //  or 150 for 15 centimeters.
                     xClose = 1;
@@ -189,7 +201,6 @@ int move_forward(oi_t *sensor_data, double distance_mm) {
                 }
 
         }
-
         for (y = 0; y < yCliffCoords.length; ++y) {
                 if (abs(currentY - xCliffCoords[y]) <= 15.0) { // or 150 for 15 centimeters.
                 yClose = 1;
@@ -205,17 +216,26 @@ int move_forward(oi_t *sensor_data, double distance_mm) {
                 }
         }
 
-        if (xClose == 1 || yClose == 1) { 
-            // if it is close in any dimension, then you are going to go out of bounds or run into a previously
-            // recorded object. 
 
-            // do similar code to the above if statement.
-            // make it stop, and scan for alt. routes.
-            // If no alt. routes (stuck), then switch to manual mode.
-            // print out a message that says " It's Stuck1 Botmaxxers, switch to Manual Mode!"
-            // press a button a keyboard. Make it simple.
-
+        if (xClose == 1 || yClose == 1) {
+        oi_setWheels(0, 0);
+        // Reset coord tracking so fresh scan doesn't append to stale data
+        objectCoordIndex = 0;
+        bestDistance = 0.0;
+        bestI = -1;
+        bestJ = -1;
+        // Fresh scan to get current object positions relative to CyBot NOW
+        scan_start_stop_send_ir(0, 180, 2, sensor_data);
+        // ^^^ This populates xObjectCoords[], yObjectCoords[], objectCoordIndex
+        // but it will also call drive_to_smallest at the end — so you need to
+        // prevent that. See fix below.
+        int decision = drive_through_largest_opening(sensor_data);
+        if (decision == -5) {
+            uart_sendStr("Stuck! Botmaxxers, switch to Manual Mode!\r\n");
+            manualMode = 1;
+            return -1;
         }
+}
 
         //Adds to the sum for the while condition
         sum += sensor_data -> distance;
@@ -224,8 +244,8 @@ int move_forward(oi_t *sensor_data, double distance_mm) {
     }
     //stops the wheels
     oi_setWheels(0, 0);
-    currentX = currentX + (sum * cos(currentAngle));
-    currentY = currentY + (sum * sin(currentAngle));
+    currentX = currentX + ((sum / 10.0) * cos(currentAngle));  // convert mm to cm
+    currentY = currentY + ((sum / 10.0) * sin(currentAngle));
      // two lines above update current position of the CyBot.
     return bumped;
 
@@ -352,14 +372,8 @@ int drive_to_smallest( oi_t *sensor_data){
                    distance = distance_of_object[i];
                }
 
-
-
            }
-
            }
-
-
-
            if(angle_of_minR == 90){
 
                bumped = move_forward(sensor_data, (distance * 5) - 100);
@@ -482,11 +496,9 @@ int scan_start_stop_send_ir(int start, int stop, int angle_step, oi_t *sensor_da
     int i = 0;
 
     for (i = 0; i < 10; i++) {
-
         linear_width[i] = 0;
         angleStored[i] = 0;
         distance_of_object[i] = 0;
-
     }
 
     int average_ir[4];
@@ -555,13 +567,13 @@ int scan_start_stop_send_ir(int start, int stop, int angle_step, oi_t *sensor_da
 
     }
 
-    int returned = drive_to_smallest(sensor_data);
+    /*int returned = drive_to_smallest(sensor_data);
 
     if(returned == 1){
 
         return 1;
 
-    }
+    }*/
 
     return 0;
 
@@ -644,232 +656,130 @@ void detect_object(int angle, double distance, int array_pos){
                 distance_of_object[arrayCounter] = average_distance;
 
 
-                // when stopping an object, you need to add in xy cords of objects that has been detected.
-		        objectCoordIndex = objectCoordIndex + 1;
+               
 		        xObjectCoords[objectCoordIndex] = fin_distance * (cos(fin_angle)); // uses geometry in order to do it.
 		        yObjectCoords[objectCoordIndex] = fin_distance * (sin(fin_angle));
+                 // when stopping an object, you need to add in xy cords of objects that has been detected. NOT COMPLETE
+		        objectCoordIndex = objectCoordIndex + 1;
 
-
-
-                arrayCounter += 1;
-                send_angle_and_dist_object(objectNum, middle_angle, average_distance, angular_width);
-            }
-        }
-    }
-}
-
-/*
-
-
-The below code is idea code. Some of it is included above.
-
-
-Main() method:
-
-int destination.
-
-while(destination != 1):
-	// start.
-	oi_moveForward(current_speed, current_speed); // or hardcoded value.
-	// The destination function will run everything else.
-	
-} // Overall, the main method should contain only a few lines.
-
-public int destination() { // 0 if still going, 1 if stopped at destination.
-	// First, run autonomously.
-	
-		
-	// 
-
-}
-
-
-
-
-    oi_update(sensor_data);
-
-    if (sensor_data->bumpLeft || sensor_data->bumpRight) {
-        // stop or reverse
-        oi_setWheels(0, 0);
-    }
-    if (sensor_data->cliffLeft || sensor_data->cliffFrontLeft ||
-        sensor_data->cliffFrontRight || sensor_data->cliffRight) {
-        // stop at edge
-        oi_setWheels(0, 0);
-    }
-}
-
-oi_free(sensor_data); // cleanup at end
-
- // uart_interrupt.c file
-volatile int current_speed = 200; // default speed, matches your move_forward(
-// uart_interrupt.h file
-extern volatile int current_speed;
-
-if (byte_received == '+' || byte_received == '=') {
-    current_speed += 50;
-    if (current_speed > 500) current_speed = 500; // max speed cap
-}
-else if (byte_received == '-') {
-    current_speed -= 50;
-    if (current_speed < 50) current_speed = 50;  // min speed cap
-}
-else if (byte_received == 'w') { command_byte = 'w'; command_flag = 1; }
-else if (byte_received == 's') { command_byte = 's'; command_flag = 1; }
-else if (byte_received == 'a') { command_byte = 'a'; command_flag = 1; }
-else if (byte_received == 'd') { command_byte = 'd'; command_flag = 1; }
-else if (byte_received == 'q') { command_byte = 'q'; command_flag = 1; } // stop
-
-"Important: Don't put oi_setWheels() directly inside the ISR — that's time-consuming code inside an interrupt, which your own comments warn against. Just set flags and let main() act on them."
-
-Update movement.c to use current_speed instead of hardcoded values.
-
-Manual mode loop in main(): 
-uart_interrupt_init();
-oi_t *sensor_data = oi_alloc();
-oi_init(sensor_data);
-
-char speed_str[32];
-
-uart_sendStr("Controls: W/S/A/D=move, +/-=speed, Q=stop\r\n");
-
-while(1) {
-    if (command_flag) {
-        command_flag = 0; // clear flag first
-
-        if (command_byte == 'w') {
-            oi_setWheels(current_speed, current_speed);
-        }
-        else if (command_byte == 's') {
-            oi_setWheels(-current_speed, -current_speed);
-        }
-        else if (command_byte == 'a') {
-            oi_setWheels(-current_speed, current_speed); // turn left
-        }
-        else if (command_byte == 'd') {
-            oi_setWheels(current_speed, -current_speed); // turn right
-        }
-        else if (command_byte == 'q') {
-            oi_setWheels(0, 0);
-        }
-
-        // print current speed to PuTTY
-        sprintf(speed_str, "\r\nSpeed: %d\r\n", current_speed);
-        uart_sendStr(speed_str);
-    }
-
-    // still check cliff/bump sensors even in manual mode
-    oi_update(sensor_data);
-    if (sensor_data->cliffLeft || sensor_data->cliffFrontLeft ||
-        sensor_data->cliffFrontRight || sensor_data->cliffRight) {
-        oi_setWheels(0, 0);
-        uart_sendStr("CLIFF DETECTED - stopped\r\n");
-	boundaries[boundariesIndex++] = sensor_data->distance. // or variable that represents current xCoord of cybot, like xCurrent;
-	// add to the float boundaries array so CyBot does not come close to it again.
-	
-    }
-}
-
-
-
-
-UART And Scan Controls.c. This file is responsible for the scanning, detection, and avoidance of objects in Lab 7. Lots of edits are going to be made here
-in order to do autonomous mode that we desire.
-
-void detect_object(int angle, double distance, int array_pos){
-
-    double difference = 0;
-    double average_distance = 0.0;
-    int middle_angle = 0;
-    int angular_width = 0;
-    int linear_width_in = 0.0;
-
-
-    distances[array_pos] = distance;
-
-    if(array_pos > 2){
-
-        if(array_pos > 4){
-/*
-    if(array_pos == 5){
-        difference = distances[array_pos] - distances[array_pos - 1];
-    }
-    else if(array_pos == 6){
-            difference = distances[array_pos] - distances[array_pos - 2];
-    }
-    else if(array_pos == 7){
-            difference = distances[array_pos] - distances[array_pos - 3];
-    }
-    else if(array_pos == 8){
-            difference = distances[array_pos] - distances[array_pos - 4];
-    }
-    else if(array_pos == 9){
-            difference = distances[array_pos] - distances[array_pos - 5];
-    }
-    else{
-        difference = distances[array_pos] - distances[array_pos - 5];
-    }
-
-*/
-           /* if(array_pos < 3){
-
-                difference = 3;
-
-            }
-
-            else{
-
-               // difference = distances[array_pos] - ((distances[array_pos] + distances[array_pos - 1] + distances[array_pos - 2]) / 3);
-                difference = distances[array_pos] - distances[array_pos - 5];
-            }
-
-
-            if(difference <= -6 ){
-
-
-                ini_distance = distance;
-                first_tripped = 1;
-                ini_angle = angle;
-
-
-            }
-
-            else if((difference > 6) && first_tripped == 1){ // executes when stop detecting object
-
-                fin_angle = angle -  2;
-                fin_distance = distance;
-                average_distance = (ini_distance + distances[array_pos - 1])/2;
-                middle_angle = (ini_angle + fin_angle)/2;
-                angular_width = (fin_angle - ini_angle);
-                linear_width_in = average_distance * ((angular_width * M_PI) / 180);
-                objectNum++;
-                first_tripped = 0;
-                counter = 0;
-                linear_width[arrayCounter] = linear_width_in;
-                angleStored[arrayCounter] = middle_angle;
-                distance_of_object[arrayCounter] = average_distance;
                 
-		// when stopping an object, you need to add in xy cords of objects that has been detected.
-		objectCoordIndex = objectCoordIndex + 1;
-		xObjectCoords[objectCoordIndex] = fin_distance * (cos(fin_angle)); // uses geometry in order to do it.
-		yObjectCoords[objectCoordIndex] = fin_distance * (sin(fin_angle));
-		
                 arrayCounter += 1;
                 send_angle_and_dist_object(objectNum, middle_angle, average_distance, angular_width);
-
-
             }
-
-
         }
-
     }
-
 }
 
 
+int drive_through_largest_opening(oi_t *sensor_data) {
+                // detect if too many objects are true. The first obj coordinates will belong to xObjectCoords[0] and 
+                // yobjectCoords[0], respectively.
+
+    
+        if (objectCoordIndex < 2) {
+            uart_sendStr("Not enough objects detected to find an opening.\r\n");
+            return -1;
+        }     
+                int i = 0;
+                int j = 0;
+                bestI = -1;
+                bestJ = -1;
+                for (i = 0; i < objectCoordIndex; ++i) {
+
+                    double dx = xObjectCoords[i] - currentX;
+                    double dy = yObjectCoords[i] - currentY;
+                    double dist_to_obj = sqrt(dx * dx + dy * dy);
+
+                    if (dist_to_obj > MAX_SCAN_DIST_IR) { // if dist > 80.0 cm.
+                        continue;
+                    }
 
 
+                    for (j = i + 1; j < objectCoordIndex; ++j) {
+                        double dx2 = xObjectCoords[j] - currentX;
+                        double dy2 = yObjectCoords[j] - currentY;
+                        double dist_to_obj_j = sqrt(dx2 * dx2 + dy2 * dy2);
+
+                        if (dist_to_obj_j > MAX_IR_SCAN_DIST) {
+                            continue;
+                        
+                        }
+                        double x = xObjectCoords[i] - xObjectCoords[j];
+                        double y = yObjectCoords[i] - yObjectCoords[j];
+                        double distance = sqrt(x * x + y * y);
+                        if (distance <= CYBOT_WIDTH) {
+                            continue;
+                        }
+
+                        // need to record the biggest opening to go through.
+                        if (distance > bestDistance) {
+                            bestI = i;
+                            bestJ = j;
+                            bestDistance = distance;
+                            bestX = (xObjectCoords[i] + xObjectCoords[j]) / 2.0f;
+                            bestY = (yObjectCoords[i] + yObjectCoords[j]) / 2.0f;
+                        }
+                        
+                    }
+                }
+        if (bestI == -1) {
+            uart_sendStr("No passable gap found between objects.\r\n");
+            tooManyObjects = 01; // true
+            return -5;
+        }
+        tooManyObjects = 0;
+    // --- Step 1: Find the largest valid gap between any two object coords ---
+    // --- Step 2: Compute angle to the opening midpoint ---
+    // atan2f gives angle in radians relative to +X axis; convert to degrees
+    float angle_to_opening = atan2f(bestY, bestX) * (180.0f / M_PI);
+
+    char msg[128];
+    sprintf(msg, "Best opening midpoint: (%.1f, %.1f), gap: %.1f cm, heading: %.1f deg\r\n",
+            bestX, bestY, bestDistance, angle_to_opening);
+    uart_sendStr(msg);
+
+    // --- Step 3: Compute how much to turn from current heading ---
+    // currentAngle must be maintained in degrees in your main loop
+    float turn_needed = angle_to_opening - currentAngle;
+
+    // Normalize to [-180, 180] so we always take the shorter turn
+    while (turn_needed > 180.0f)  turn_needed -= 360.0f;
+    while (turn_needed < -180.0f) turn_needed += 360.0f;
 
 
-*/
+    sprintf(msg, "Turning %.1f degrees to face opening.\r\n", turn_needed);
+    uart_sendStr(msg);
+
+    // --- Step 4: Execute the turn ---
+    if (turn_needed > 1.0f) {                   // small deadband to avoid micro-turns
+        turn_left(sensor_data, turn_needed);
+    } else if (turn_needed < -1.0f) {
+        turn_right(sensor_data, -turn_needed);   // turn_right takes a positive value
+    }
+
+    // Update heading after turning
+    currentAngle += turn_needed;
+    // Normalize currentAngle too
+    while (currentAngle > 180.0f)  currentAngle -= 360.0f;
+    while (currentAngle < -180.0f) currentAngle += 360.0f;
+
+    // --- Step 5: Drive to the midpoint of the opening ---
+    // Distance to the midpoint from current position (CyBot is at origin of its local frame)
+    double dist_to_opening_mm = sqrt(bestX * bestX + bestY * bestY) * 10.0;  // converts to millimeters.
+    // multiply by 10 if your coords are in cm and move_forward takes mm
+
+    sprintf(msg, "Driving %.1f mm toward opening.\r\n", dist_to_opening_mm);
+    uart_sendStr(msg);
+
+    int result = move_forward(sensor_data, dist_to_opening_mm);
+
+    if (result == 0) {
+        uart_sendStr("Bumped or cliffed while approaching opening.\r\n");
+    } else if (result == -1) {
+        uart_sendStr("User stopped movement.\r\n");
+    } else {
+        uart_sendStr("Successfully passed through opening!\r\n");
+    }
+
+    return result;
+}
