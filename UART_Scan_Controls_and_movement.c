@@ -119,7 +119,7 @@ move_forward(sensor_data, 200);
 
  
 
-        else if (command_byte == 'a') turn_left(sensor_data, 90) { 
+        else if (command_byte == 'a') { 
 
 turn_left(sensor_data, 90);	 
 
