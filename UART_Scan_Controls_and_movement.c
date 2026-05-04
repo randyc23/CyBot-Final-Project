@@ -28,6 +28,123 @@
 */
 
 
+/* Main method code we could use for the handling of autonomous and switiching mode as well as detecting bytes received on a keyboard.
+	Main() method: 
+
+int destination. 
+
+while(destination != 1): 
+
+	// start. 
+
+	oi_moveForward(current_speed, current_speed); // or hardcoded value. 
+
+	// The destination function will run everything else. 
+
+} // Overall, the main method should contain only a few lines. 
+
+public int destination() { // 0 if still going, 1 if stopped at destination. 
+
+	// First, run autonomously. 
+
+	//  
+
+} 
+
+    oi_update(sensor_data); 
+
+    if (sensor_data->bumpLeft || sensor_data->bumpRight) { 
+
+        // stop or reverse 
+
+        oi_setWheels(0, 0); 
+
+    } 
+
+    if (sensor_data->cliffLeft || sensor_data->cliffFrontLeft || 
+
+        sensor_data->cliffFrontRight || sensor_data->cliffRight) { 
+
+        // stop at edge 
+
+        oi_setWheels(0, 0); 
+
+    } 
+
+} 
+
+oi_free(sensor_data); // cleanup at end 
+
+// uart_interrupt.c file 
+
+volatile int current_speed = 200; // default speed, matches your move_forward( 
+
+// uart_interrupt.h file 
+
+extern volatile int current_speed; 
+
+if (byte_received == '+' || byte_received == '=') { 
+
+    current_speed += 50; 
+
+    if (current_speed > 500) current_speed = 500; // max speed cap 
+
+} 
+
+else if (byte_received == '-') { 
+
+    current_speed -= 50; 
+
+    if (current_speed < 50) current_speed = 50;  // min speed cap 
+
+} 
+
+if (manualMode) { 
+
+    if (command_flag) { 
+
+        command_flag = 0; 
+
+        if (command_byte == 'w')  { 
+
+move_forward(sensor_data, 200); 
+
+     } 
+
+        else if (command_byte == 's')  { 
+
+	move_backward(sensor_data, -200);	 
+
+      } 
+
+ 
+
+        else if (command_byte == 'a') turn_left(sensor_data, 90) { 
+
+turn_left(sensor_data, 90);	 
+
+} 
+
+        else if (command_byte == 'd') turn_right(sensor_data, 90) { 
+
+turn_right(sensor_data, 90);	 
+
+} 
+
+    } 
+
+Int num = move_forward(sensor_data, 0); 
+
+If num = -1 > manualMode = 1; 
+
+} 
+
+
+
+
+*/
+
+
 
 //Global Variable/Arrays
 
