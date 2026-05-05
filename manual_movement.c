@@ -79,7 +79,6 @@ void manual_driving(oi_t *sensor_data){
                     case ' ':
                         requested = MOTION_STOP;
                         break;
-
                     //Can add more cases if needed
 
                     default:
@@ -88,6 +87,39 @@ void manual_driving(oi_t *sensor_data){
 
          }
 
+
+
+
+         if (sensor_data->bumpLeft) {
+             oi_setWheels(0, 0);
+             uart_sendStr("B Left\r\n");
+             move_backward(sensor_data, -50);
+         }
+        if (sensor_data->bumpRight) {
+             oi_setWheels(0, 0);
+             uart_sendStr("B Right\r\n");
+             move_backward(sensor_data, -50);
+         }
+        if (sensor_data->cliffLeft) {
+             oi_setWheels(0, 0);
+             uart_sendStr("C Left\r\n");
+             move_backward(sensor_data, -50);
+         }
+         if (sensor_data->cliffRight) {
+             oi_setWheels(0, 0);
+             uart_sendStr("C Right\r\n");
+             move_backward(sensor_data, -50);
+         }
+         if (sensor_data->cliffFrontLeft) {
+             oi_setWheels(0, 0);
+             uart_sendStr("C Front Left\r\n");
+             move_backward(sensor_data, -50);
+         }
+         if (sensor_data->cliffFrontRight) {
+             oi_setWheels(0, 0);
+             uart_sendStr("C Front Right\r\n");
+             move_backward(sensor_data, -50);
+         }        
         if(requested != current_motion){
             apply_motion(requested, sensor_data);
         }
