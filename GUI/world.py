@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Optional
 
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -74,7 +73,7 @@ class WorldObject:
     center_y: float
     obj_type: ObjectType
     shape: ObjectShape
-    size: float = 0.0          # approximate radius or extent in cm
+    radius: float = 0.0          # approximate radius or extent in cm
     label: Optional[str] = None
 
     def distance_to(self, x: float, y: float) -> float:
@@ -126,7 +125,6 @@ MIN_POINTS_FOR_OBJECT = 2
 
 def cluster_scan_points(points: list[ScanPoint]) -> list[WorldObject]:
     """
-
     This is intentionally naive — replace with something smarter once you
     have real field data to work with.
     """
@@ -161,28 +159,34 @@ def _cluster_to_object(cluster: list[ScanPoint]) -> Optional[WorldObject]:
     if len(cluster) < MIN_POINTS_FOR_OBJECT:
         return None
 
-    # Center is the average of all points
-    cx = sum(p.global_x for p in cluster) / len(cluster)
-    cy = sum(p.global_y for p in cluster) / len(cluster)
+    first_point = cluster[0]
+    last_point = cluster[-1]
 
-    # Size is the max distance from center to any point
-    size = max(math.hypot(p.global_x - cx, p.global_y - cy) for p in cluster)
+    radius = math.hypot(last_point.global_x - first_point.global_x, 
+                        last_point.global_y - first_point.global_y) / 2
 
-    # Determine shape based on spread
-    # TODO: refine these thresholds with real data
-    if len(cluster) <= 3:
-        shape = ObjectShape.CYLINDER
-    elif size > 40.0:
-        shape = ObjectShape.WALL
-    else:
-        shape = ObjectShape.CLUSTER
+    #Find the center of all the points
+    centroid_x = sum(point.global_x for point in cluster) / len(cluster)
+    centroid_y = sum(point.global_y for point in cluster) / len(cluster)
 
+    dx = centroid_x - first_point.bot_x
+    dy = centroid_y - first_point.bot_y
+    dl = math.hypot(dx, dy)
+
+    dx /= dl
+    dy /= dl
+
+    center_x = centroid_x + (dx * radius) 
+    center_y = centroid_y + (dy * radius) 
+
+    #TODO: maybe change this
+    #Assume every object scanned is roughly circular for now 
     return WorldObject(
-        center_x=cx,
-        center_y=cy,
+        center_x=center_x,
+        center_y=center_y,
         obj_type=ObjectType.TALL,
-        shape=shape,
-        size=size
+        shape=ObjectShape.CYLINDER,
+        radius=radius
     )
 
 
@@ -278,6 +282,35 @@ class WorldMap:
         self.emergency_stop = True
         self.last_interrupt = f"BUMP:{sensor_id}"
         print(f"[world] Bump event on sensor: {sensor_id}")
+
+        bump_x = 0
+        bump_y = 0
+        #TODO: id might be called something else
+        if (sensor_id == "Left"):
+            bump_x, bump_y = polar_to_global(
+                self.bot.x, self.bot.y, self.bot.angle,
+                -45, 22.5
+            )
+        elif (sensor_id == "Right"):
+            bump_x, bump_y = polar_to_global(
+                self.bot.x, self.bot.y, self.bot.angle,
+                45, 22.5
+            )
+        elif (sensor_id == "Both"):
+            bump_x, bump_y = polar_to_global(
+                self.bot.x, self.bot.y, self.bot.angle,
+                0, 16
+            )
+        
+        if bump_x and bump_y:
+            self.objects.append(
+                WorldObject(
+                    center_x=bump_x,
+                    center_y=bump_y,
+                    obj_type=ObjectType.SHORT,
+                    shape=ObjectShape.CYLINDER,
+                    radius=16
+            ))
 
     def handle_cliff(self, sensor_id: str):
         """Called when a cliff packet is received."""

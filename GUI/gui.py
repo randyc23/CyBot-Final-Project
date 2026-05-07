@@ -114,8 +114,8 @@ class MainWindow(QMainWindow):
 
         # Other command buttons
         action_row = QHBoxLayout()
-        scan_btn = QPushButton("Scan (Space)")
-        scan_btn.clicked.connect(lambda: self._send(" "))
+        scan_btn = QPushButton("Scan (e)")
+        scan_btn.clicked.connect(lambda: self._send("e"))
         stop_btn = QPushButton("Stop (X)")
         stop_btn.clicked.connect(lambda: self._send("x"))
         ack_btn = QPushButton("Ack Interrupt")
@@ -246,7 +246,7 @@ class MainWindow(QMainWindow):
             Qt.Key_Left:   "a",
             Qt.Key_Down:   "s",
             Qt.Key_Right:  "d",
-            Qt.Key_Space:  " ",   # trigger scan
+            Qt.Key_E:  "e",   # trigger scan
             Qt.Key_X:      "x",   # stop
         }
         cmd = key_map.get(event.key())
@@ -254,6 +254,17 @@ class MainWindow(QMainWindow):
             self._send(cmd)
         else:
             super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event: QKeyEvent):
+        """Send stop command when a movement key is released."""
+        movement_keys = {
+            Qt.Key_W, Qt.Key_A, Qt.Key_S, Qt.Key_D,
+            Qt.Key_Up, Qt.Key_Left, Qt.Key_Down, Qt.Key_Right,
+        }
+        if event.key() in movement_keys and not event.isAutoRepeat():
+            self._send("x")
+        else:
+            super().keyReleaseEvent(event)
 
     def closeEvent(self, event):
         self.conn.disconnect()

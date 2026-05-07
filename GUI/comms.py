@@ -9,15 +9,6 @@ import socket
 import threading
 import queue
 
-
-# --- Packet type constants ---
-# These should match whatever prefix convention you settle on for the bot firmware.
-# Recommended format:
-#   Scan reading:     "S\t<angle>\t<ir>\t<ping>\r\n"
-#   Position update:  "P\t<x>\t<y>\t<angle>\r\n"
-#   Bump event:       "B\t<sensor_id>\r\n"
-#   Cliff event:      "C\t<sensor_id>\r\n"
-
 PACKET_SWEEP_START = "SS"
 PACKET_SWEEP_END   = "SE"
 PACKET_SCAN     = "S"
@@ -92,6 +83,7 @@ def parse_line(line: str) -> Packet | None:
                 ping=float(parts[3])
             )
 
+        
         elif prefix == PACKET_POSITION and len(parts) == 4:
             return PositionPacket(
                 x=float(parts[1]),

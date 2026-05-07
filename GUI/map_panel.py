@@ -147,7 +147,7 @@ class MapPanel(QWidget):
             painter.setPen(QPen(color, 2))
             painter.setBrush(QBrush(QColor(color.red(), color.green(), color.blue(), 80)))
 
-            radius_px = max(6, obj.size * SCALE)
+            radius_px = max(6, obj.radius * SCALE)
 
             if obj.shape == ObjectShape.CYLINDER or obj.shape == ObjectShape.POINT:
                 painter.drawEllipse(sp, radius_px, radius_px)
@@ -165,12 +165,12 @@ class MapPanel(QWidget):
     def _draw_bot(self, painter: QPainter):
         """Draw the bot as a circle with a heading indicator."""
         bsp = self._bot_screen_pos()
-        bot_radius = 10
+        bot_radius = 16
 
         # Body
         painter.setPen(QPen(COLOR_BOT, 2))
         painter.setBrush(QBrush(QColor(0, 212, 255, 60)))
-        painter.drawEllipse(bsp, bot_radius, bot_radius)
+        painter.drawEllipse(bsp, bot_radius * SCALE, bot_radius * SCALE)
 
         # Heading arrow
         heading_rad = math.radians(self.world.bot.angle)
